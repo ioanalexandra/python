@@ -1,4 +1,3 @@
-
 import pyglet
 from pyglet.window import mouse
 from pyglet import shapes
