@@ -20,6 +20,11 @@ class Application:
         self.board = Board(0, window.height - 180)
         self.tabla = [ [ 0 for i in range(3) ] for j in range(3) ]
         self.turn = 0
+        self.mode = 0
+        self.lin = [ 0, 0, 0]
+        self.col = [ 0, 0, 0]
+        self.diag1 = 0
+        self.diag2 = 0
     def draw(self, p):
         self.board.draw(p)
         for e in self.drawables:
@@ -35,6 +40,10 @@ class Application:
                 if x2 > 2:
                     x2 = 2
                 if self.tabla[x2][y2] == 0:
+                    self.lin[x2] = self.lin[x2] - 1
+                    self.col[y2] = self.col[y2] - 1
+                    if x2 == y2: self.diag1 = self.diag1 - 1
+                    if x2 + y2 == 2 : self.diag2 = self.diag2 - 1
                     self.tabla[x2][y2] = 1
                     self.turn = (self.turn + 1) % 2
                     self.drawables.append(Xobj(int(x2 * aux + aux / 4), int((y2+1) * aux - aux / 4)))
@@ -49,11 +58,19 @@ class Application:
                 if x2 > 2:
                     x2 = 2
                 if self.tabla[x2][y2] == 0:
+                    self.lin[x2] = self.lin[x2] + 1
+                    self.col[y2] = self.col[y2] + 1
+                    if x2 == y2: self.diag1 = self.diag1 + 1
+                    if x2 + y2 == 2 : self.diag2 = self.diag2 + 1
                     self.tabla[x2][y2] = 1
                     self.turn = (self.turn + 1) % 2
                     self.drawables.append(Oobj(int(x2 * aux + aux / 2 - 12), int((y2+1) * aux - aux / 2 + 12)))
-
-
+    def checkWin(self):
+        for i in range(3):
+            if self.lin[i] and self.lin[i] % 3 == 0: print("A castigat ", 'O' if self.lin[i] > 0 else 'X'); quit()
+            elif self.col[i] and self.col[i] % 3 == 0: print("A castigat ", 'O' if self.lin[i] > 0 else 'X'); quit()
+        if self.diag1 and self.diag1 % 3 == 0: print("A castigat ", 'O' if self.lin[i] > 0 else 'X'); quit()
+        elif self.diag2 and self.diag2 % 3 == 0: print("A castigat ", 'O' if self.lin[i] > 0 else 'X'); quit()
 
 class Drawable:
     def __init__(self, x, y, color = (0, 0, 0), size = 10):
@@ -106,12 +123,25 @@ app = Application()
 @window.event
 def on_draw():
     window.clear()
+    global app
     app.draw(pyglet)
+    app.checkWin()
+
 
 @window.event
 def on_mouse_release(x, y, button, modifiers):
         if(button == mouse.LEFT):
-            app.putO(x, y)
-
+            global app
+            if app.mode == 0:
+                if app.turn == 0:
+                    app.putX(x, y)
+                else:
+                    app.putO(x, y)
+            else:
+                if app.turn == 0:
+                    app.putO(x, y)
+                else:
+                    app.putX(x, y)
+                
 
 pyglet.app.run()
