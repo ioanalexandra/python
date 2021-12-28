@@ -16,6 +16,8 @@ pyglet.gl.glClearColor(111/255, 145/255, 47/255, 1)
 
 class Application:
     def __init__(self):
+        self.scoreX = 0
+        self.scoreO = 0
         self.drawables = list()
         self.board = Board(0, window.height - 180)
         self.tabla = [ [ 0 for i in range(3) ] for j in range(3) ]
@@ -25,8 +27,17 @@ class Application:
         self.col = [ 0, 0, 0]
         self.diag1 = 0
         self.diag2 = 0
+        self.finished = 0
+        self.freeSpace = 9
+        self.winLabel = pyglet.text.Label('', font_name = 'Times New Roman',
+         font_size=20, x=400, y=150)
+        self.scoreLabel = pyglet.text.Label('', font_name = 'Times New Roman',
+         font_size=20, x=350, y=275)
     def draw(self, p):
+        self.scoreLabel.text = "Scor X:{x}    Scor O:{o}".format(x=self.scoreX, o=self.scoreO)
+        self.winLabel.draw()
         self.board.draw(p)
+        self.scoreLabel.draw()
         for e in self.drawables:
             e.draw(p)
     def putX(self, x, y):
@@ -47,6 +58,7 @@ class Application:
                     self.tabla[x2][y2] = 1
                     self.turn = (self.turn + 1) % 2
                     self.drawables.append(Xobj(int(x2 * aux + aux / 4), int((y2+1) * aux - aux / 4)))
+                    self.freeSpace = self.freeSpace - 1
     def putO(self, x, y):
         if x>=self.board.x and x<=self.board.lineWidth*2 + self.board.size*3:
             if y<=self.board.y and y>=self.board.y-(self.board.lineWidth*2 + self.board.size*3):
@@ -65,12 +77,43 @@ class Application:
                     self.tabla[x2][y2] = 1
                     self.turn = (self.turn + 1) % 2
                     self.drawables.append(Oobj(int(x2 * aux + aux / 2 - 12), int((y2+1) * aux - aux / 2 + 12)))
+                    self.freeSpace = self.freeSpace - 1
     def checkWin(self):
         for i in range(3):
-            if self.lin[i] and self.lin[i] % 3 == 0: print("A castigat ", 'O' if self.lin[i] > 0 else 'X'); quit()
-            elif self.col[i] and self.col[i] % 3 == 0: print("A castigat ", 'O' if self.lin[i] > 0 else 'X'); quit()
-        if self.diag1 and self.diag1 % 3 == 0: print("A castigat ", 'O' if self.lin[i] > 0 else 'X'); quit()
-        elif self.diag2 and self.diag2 % 3 == 0: print("A castigat ", 'O' if self.lin[i] > 0 else 'X'); quit()
+            if self.lin[i] and self.lin[i] % 3 == 0: 
+                self.winLabel.text = "A castigat " + ('O' if self.lin[i] > 0 else 'X'); self.finished = 1
+                if self.lin[i] > 0 : self.scoreO = self.scoreO + 1
+                else : self.scoreX = self.scoreX + 1
+                break
+            elif self.col[i] and self.col[i] % 3 == 0: 
+                self.winLabel.text = "A castigat " + ('O' if self.lin[i] > 0 else 'X'); self.finished = 1
+                if self.col[i] > 0 : self.scoreO = self.scoreO + 1
+                else : self.scoreX = self.scoreX + 1
+                break
+        if self.diag1 and self.diag1 % 3 == 0: 
+            self.winLabel.text = "A castigat " + ('O' if self.lin[i] > 0 else 'X'); self.finished = 1
+            if self.diag1 > 0 : self.scoreO = self.scoreO + 1
+            else : self.scoreX = self.scoreX + 1
+        elif self.diag2 and self.diag2 % 3 == 0: 
+            self.winLabel.text = "A castigat " + ('O' if self.lin[i] > 0 else 'X'); self.finished = 1
+            if self.diag2 > 0 : self.scoreO = self.scoreO + 1
+            else : self.scoreX = self.scoreX + 1
+       # verif remiza
+        if self.finished == 0:
+           if self.freeSpace == 0:
+                self.finished = 1     
+                self.winLabel.text = "Remiza"
+
+    def reset(self):
+        for i in range(3):
+            self.lin[i] = self.col[i] = 0
+        self.diag1 = self.diag2 = self.turn = self.finished = 0
+        self.freeSpace = 9
+        self.drawables = self.drawables[0:0]
+        self.winLabel.text = ''
+        for i in range(3): 
+            for j in range(3):
+                self.tabla[i][j] = 0
 
 class Drawable:
     def __init__(self, x, y, color = (0, 0, 0), size = 10):
@@ -124,24 +167,26 @@ app = Application()
 def on_draw():
     window.clear()
     global app
-    app.draw(pyglet)
     app.checkWin()
+    app.draw(pyglet)
 
 
 @window.event
 def on_mouse_release(x, y, button, modifiers):
         if(button == mouse.LEFT):
             global app
-            if app.mode == 0:
-                if app.turn == 0:
-                    app.putX(x, y)
+            if app.finished == 0:
+                if app.mode == 0:
+                    if app.turn == 0:
+                        app.putX(x, y)
+                    else:
+                        app.putO(x, y)
                 else:
-                    app.putO(x, y)
+                    if app.turn == 0:
+                        app.putO(x, y)
+                    else:
+                        app.putX(x, y)
             else:
-                if app.turn == 0:
-                    app.putO(x, y)
-                else:
-                    app.putX(x, y)
-                
+                app.reset()
 
 pyglet.app.run()
