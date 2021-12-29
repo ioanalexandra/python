@@ -5,16 +5,14 @@ from pyglet import shapes
 window = pyglet.window.Window()
 window.set_size(600, 300)
 pyglet.gl.glClearColor(111/255, 145/255, 47/255, 1)
-#pyglet.gl.glClearColor(173/255, 142/255, 28/255, 1)
-#pyglet.gl.glClearColor(179/255, 104/255, 12/255,1)
 
-#label = pyglet.text.Label('Hello, world',
- #                         font_name='Times New Roman',
-  #                        font_size=36,
-   #                       x=window.width//2, y=window.height//2,
-    #                      anchor_x='center', anchor_y='center')
+AI_FIRST = 2
+PLAYER_FIRST = 1
+X_TURN = 0
+O_TURN = 1
 
 class Application:
+    pozitii = ((1, 1), (0, 0), (2, 2), (2, 0), (0, 2), (1, 0), (0, 1), (2, 1), (1, 2) ) 
     def __init__(self):
         self.scoreX = 0
         self.scoreO = 0
@@ -22,7 +20,7 @@ class Application:
         self.board = Board(0, window.height - 180)
         self.tabla = [ [ 0 for i in range(3) ] for j in range(3) ]
         self.turn = 0
-        self.mode = 0
+        self.mode = PLAYER_FIRST
         self.lin = [ 0, 0, 0]
         self.col = [ 0, 0, 0]
         self.diag1 = 0
@@ -40,44 +38,55 @@ class Application:
         self.scoreLabel.draw()
         for e in self.drawables:
             e.draw(p)
-    def putX(self, x, y):
-        if x>=self.board.x and x<=self.board.lineWidth*2 + self.board.size*3:
-            if y<=self.board.y and y>=self.board.y-(self.board.lineWidth*2 + self.board.size*3):
-                aux = self.board.size + self.board.lineWidth
-                x2 = int(x / aux)
-                y2 = int(y / aux)
-                if y2 > 2:
-                    y2 = 2
-                if x2 > 2:
-                    x2 = 2
+    def put(self, x, y, el):
+        if x >= self.board.x and x <= self.board.lineWidth * 2 + self.board.size * 3:
+            if y <= self.board.y and y >= self.board.y-(self.board.lineWidth * 2 + self.board.size * 3):
+                x2, y2 = self.normalize(x, y)
                 if self.tabla[x2][y2] == 0:
-                    self.lin[x2] = self.lin[x2] - 1
-                    self.col[y2] = self.col[y2] - 1
-                    if x2 == y2: self.diag1 = self.diag1 - 1
-                    if x2 + y2 == 2 : self.diag2 = self.diag2 - 1
-                    self.tabla[x2][y2] = 1
-                    self.turn = (self.turn + 1) % 2
-                    self.drawables.append(Xobj(int(x2 * aux + aux / 4), int((y2+1) * aux - aux / 4)))
-                    self.freeSpace = self.freeSpace - 1
-    def putO(self, x, y):
-        if x>=self.board.x and x<=self.board.lineWidth*2 + self.board.size*3:
-            if y<=self.board.y and y>=self.board.y-(self.board.lineWidth*2 + self.board.size*3):
-                aux = self.board.size + self.board.lineWidth
-                x2 = int(x / aux)
-                y2 = int(y / aux)
-                if y2 > 2:
-                    y2 = 2
-                if x2 > 2:
-                    x2 = 2
-                if self.tabla[x2][y2] == 0:
-                    self.lin[x2] = self.lin[x2] + 1
-                    self.col[y2] = self.col[y2] + 1
-                    if x2 == y2: self.diag1 = self.diag1 + 1
-                    if x2 + y2 == 2 : self.diag2 = self.diag2 + 1
-                    self.tabla[x2][y2] = 1
-                    self.turn = (self.turn + 1) % 2
-                    self.drawables.append(Oobj(int(x2 * aux + aux / 2 - 12), int((y2+1) * aux - aux / 2 + 12)))
-                    self.freeSpace = self.freeSpace - 1
+                    self.place(x2, y2, el)
+    def place(self, x, y, el):
+        aux = self.board.size + self.board.lineWidth
+        threshold = -1 if el == 'X' else 1
+        self.lin[x] = self.lin[x] + threshold
+        self.col[y] = self.col[y] + threshold
+        if x == y: self.diag1 = self.diag1 + threshold
+        if x + y == 2 : self.diag2 = self.diag2 + threshold
+        self.tabla[x][y] = 1
+        self.turn = (self.turn + 1) % 2
+        if el == 'X':
+            self.drawables.append(Xobj(int(x * aux + aux / 4), int((y + 1) * aux - aux / 4)))
+        else:
+            self.drawables.append(Oobj(int(x * aux + aux / 2 - 12), int((y + 1) * aux - aux / 2 + 12)))
+        self.freeSpace = self.freeSpace - 1
+    def normalize(self, x, y):
+        aux = self.board.size + self.board.lineWidth
+        x2 = int(x / aux)
+        y2 = int(y / aux)
+        if y2 > 2:
+            y2 = 2
+        if x2 > 2:
+            x2 = 2
+        return (x2, y2)        
+    def findOnLine(self, line):
+        for i in range(3):
+           if self.tabla[line][i] == 0:
+            return i
+        return -1
+    def findOnCol(self, col):
+        for i in range(3):
+           if self.tabla[i][col] == 0:
+            return i
+        return -1
+    def findOnDiag1(self):
+        for i in range(3):
+            if self.tabla[i][i] == 0:
+                return i
+        return -1
+    def findOnDiag2(self):
+        for i in range(3):
+            if self.tabla[i][2-i] == 0:
+                return i
+        return -1
     def checkWin(self):
         for i in range(3):
             if self.lin[i] and self.lin[i] % 3 == 0: 
@@ -86,16 +95,16 @@ class Application:
                 else : self.scoreX = self.scoreX + 1
                 break
             elif self.col[i] and self.col[i] % 3 == 0: 
-                self.winLabel.text = "A castigat " + ('O' if self.lin[i] > 0 else 'X'); self.finished = 1
+                self.winLabel.text = "A castigat " + ('O' if self.col[i] > 0 else 'X'); self.finished = 1
                 if self.col[i] > 0 : self.scoreO = self.scoreO + 1
                 else : self.scoreX = self.scoreX + 1
                 break
         if self.diag1 and self.diag1 % 3 == 0: 
-            self.winLabel.text = "A castigat " + ('O' if self.lin[i] > 0 else 'X'); self.finished = 1
+            self.winLabel.text = "A castigat " + ('O' if self.diag1 > 0 else 'X'); self.finished = 1
             if self.diag1 > 0 : self.scoreO = self.scoreO + 1
             else : self.scoreX = self.scoreX + 1
         elif self.diag2 and self.diag2 % 3 == 0: 
-            self.winLabel.text = "A castigat " + ('O' if self.lin[i] > 0 else 'X'); self.finished = 1
+            self.winLabel.text = "A castigat " + ('O' if self.diag2 > 0 else 'X'); self.finished = 1
             if self.diag2 > 0 : self.scoreO = self.scoreO + 1
             else : self.scoreX = self.scoreX + 1
        # verif remiza
@@ -103,7 +112,56 @@ class Application:
            if self.freeSpace == 0:
                 self.finished = 1     
                 self.winLabel.text = "Remiza"
-
+    def calcMove(self):
+        # caut mai intai sa vad daca pot face 3 in linie
+        if self.mode == AI_FIRST and self.diag1 == -2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'X'); return
+        if self.mode == PLAYER_FIRST and self.diag1 == 2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'O'); return
+        if self.mode == AI_FIRST and self.diag2 == -2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'X'); return
+        if self.mode == PLAYER_FIRST and self.diag2 == 2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'O'); return
+        for i in range(3):
+            if self.mode == AI_FIRST:
+                if self.lin[i] == -2:
+                    self.place(i, self.findOnLine(i), 'X'); return
+                if self.col[i] == -2:
+                    self.place(self.findOnCol(i), i, 'X'); return
+            elif self.mode == PLAYER_FIRST:
+                if self.lin[i] == 2:
+                    self.place(i, self.findOnLine(i), 'O'); return
+                if self.col[i] == 2:
+                    self.place(self.findOnCol(i), i, 'O'); return
+        # dupa caut daca pot bloca 2 in linie de alea adversarului
+        for i in range(3):
+            if self.mode == AI_FIRST:
+                if self.lin[i] == 2:
+                    self.place(i, self.findOnLine(i), 'X'); return
+                if self.col[i] == 2:
+                    self.place(self.findOnCol(i), i, 'X'); return
+            elif self.mode == PLAYER_FIRST:
+                if self.lin[i] == -2:
+                    self.place(i, self.findOnLine(i), 'O'); return
+                if self.col[i] == -2:
+                    self.place(self.findOnCol(i), i, 'O'); return
+        if self.mode == AI_FIRST and self.diag1 == 2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'X'); return
+        if self.mode == PLAYER_FIRST and self.diag1 == -2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'O'); return
+        if self.mode == AI_FIRST and self.diag2 == 2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'X'); return
+        if self.mode == PLAYER_FIRST and self.diag2 == -2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'O'); return
+        # caut pozitia optima buna si pun pe ea
+        for p in Application.pozitii:
+            threshold = -1 if self.mode == AI_FIRST else 1
+            if self.tabla[p[0]][p[1]] == 0:
+                if self.lin[p[0]] + threshold == 2 * threshold or self.col[p[1]] + threshold == 2 * threshold:
+                    self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
+                    print(p)
+                    return
+                if ((p[0] == p[1] and self.diag1 + threshold == 2 * threshold) or (p[0] + p[1]==2 and self.diag2 + threshold == 2 * threshold)):
+                    self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
+                    print(p)
+                    return
+        for p in Application.pozitii:
+            if self.tabla[p[0]][p[1]] == 0:
+                self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
+                print(p)
+                return
     def reset(self):
         for i in range(3):
             self.lin[i] = self.col[i] = 0
@@ -114,6 +172,9 @@ class Application:
         for i in range(3): 
             for j in range(3):
                 self.tabla[i][j] = 0
+        if self.mode == AI_FIRST:
+            self.calcMove()
+
 
 class Drawable:
     def __init__(self, x, y, color = (0, 0, 0), size = 10):
@@ -162,6 +223,8 @@ class Board(Drawable):
 
 app = Application()
 
+if app.mode == AI_FIRST:
+    app.calcMove()
 
 @window.event
 def on_draw():
@@ -176,17 +239,17 @@ def on_mouse_release(x, y, button, modifiers):
         if(button == mouse.LEFT):
             global app
             if app.finished == 0:
-                if app.mode == 0:
-                    if app.turn == 0:
-                        app.putX(x, y)
-                    else:
-                        app.putO(x, y)
-                else:
-                    if app.turn == 0:
-                        app.putO(x, y)
-                    else:
-                        app.putX(x, y)
+                if app.mode == PLAYER_FIRST:
+                    if app.turn == X_TURN:
+                        app.put(x, y, 'X')
+                        app.calcMove()
+                elif app.mode == AI_FIRST:
+                    if app.turn == O_TURN:
+                        app.put(x, y, 'O')
+                        app.calcMove()
             else:
                 app.reset()
-
 pyglet.app.run()
+
+
+# de rezolvat cand apasa playerul pe o casuta ocupata vine randul ai-ului
