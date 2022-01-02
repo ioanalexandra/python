@@ -1,7 +1,9 @@
 import pyglet
+import random
 from pyglet.window import mouse
 from pyglet import shapes
-
+print("Alege dificultatea (1/2/3): ")
+DIFICULTATE = int(input())
 window = pyglet.window.Window()
 window.set_size(600, 300)
 pyglet.gl.glClearColor(111/255, 145/255, 47/255, 1)
@@ -13,7 +15,7 @@ O_TURN = 1
 
 class Application:
     pozitii = ((1, 1), (0, 0), (2, 2), (2, 0), (0, 2), (1, 0), (0, 1), (2, 1), (1, 2) ) 
-    def __init__(self):
+    def __init__(self, dificultate):
         self.scoreX = 0
         self.scoreO = 0
         self.drawables = list()
@@ -21,18 +23,24 @@ class Application:
         self.tabla = [ [ 0 for i in range(3) ] for j in range(3) ]
         self.turn = 0
         self.mode = PLAYER_FIRST
+        self.dif = dificultate
+        self.rand_picker = list(Application.pozitii)
+        self.dif_turn = 0 if self.dif < 3 else 1
         self.lin = [ 0, 0, 0]
         self.col = [ 0, 0, 0]
         self.diag1 = 0
         self.diag2 = 0
         self.finished = 0
         self.freeSpace = 9
-        self.winLabel = pyglet.text.Label('', font_name = 'Times New Roman',
-         font_size=20, x=400, y=150)
-        self.scoreLabel = pyglet.text.Label('', font_name = 'Times New Roman',
-         font_size=20, x=350, y=275)
+        self.winLabel = pyglet.text.Label('', font_name = 'Century Gothic',
+         font_size=20, x=450, y=150, color = (156, 78, 86, 255), bold = 1, anchor_x='center', anchor_y='center')
+        self.scoreLabel = pyglet.text.Label('', font_name = 'Century Gothic',
+         font_size=20, x=390, y=275, color = (156, 78, 86, 255), bold = 1)
+    def isFree(self, x, y):
+        x2, y2 = self.normalize(x, y)
+        return self.tabla[x2][y2] == 0
     def draw(self, p):
-        self.scoreLabel.text = "Scor X:{x}    Scor O:{o}".format(x=self.scoreX, o=self.scoreO)
+        self.scoreLabel.text = "X:{x}\t\tO:{o}".format(x=self.scoreX, o=self.scoreO)
         self.winLabel.draw()
         self.board.draw(p)
         self.scoreLabel.draw()
@@ -88,88 +96,103 @@ class Application:
                 return i
         return -1
     def checkWin(self):
-        for i in range(3):
-            if self.lin[i] and self.lin[i] % 3 == 0: 
-                self.winLabel.text = "A castigat " + ('O' if self.lin[i] > 0 else 'X'); self.finished = 1
-                if self.lin[i] > 0 : self.scoreO = self.scoreO + 1
-                else : self.scoreX = self.scoreX + 1
-                break
-            elif self.col[i] and self.col[i] % 3 == 0: 
-                self.winLabel.text = "A castigat " + ('O' if self.col[i] > 0 else 'X'); self.finished = 1
-                if self.col[i] > 0 : self.scoreO = self.scoreO + 1
-                else : self.scoreX = self.scoreX + 1
-                break
-        if self.diag1 and self.diag1 % 3 == 0: 
-            self.winLabel.text = "A castigat " + ('O' if self.diag1 > 0 else 'X'); self.finished = 1
-            if self.diag1 > 0 : self.scoreO = self.scoreO + 1
-            else : self.scoreX = self.scoreX + 1
-        elif self.diag2 and self.diag2 % 3 == 0: 
-            self.winLabel.text = "A castigat " + ('O' if self.diag2 > 0 else 'X'); self.finished = 1
-            if self.diag2 > 0 : self.scoreO = self.scoreO + 1
-            else : self.scoreX = self.scoreX + 1
-       # verif remiza
         if self.finished == 0:
-           if self.freeSpace == 0:
-                self.finished = 1     
-                self.winLabel.text = "Remiza"
-    def calcMove(self):
-        # caut mai intai sa vad daca pot face 3 in linie
-        if self.mode == AI_FIRST and self.diag1 == -2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'X'); return
-        if self.mode == PLAYER_FIRST and self.diag1 == 2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'O'); return
-        if self.mode == AI_FIRST and self.diag2 == -2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'X'); return
-        if self.mode == PLAYER_FIRST and self.diag2 == 2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'O'); return
-        for i in range(3):
-            if self.mode == AI_FIRST:
-                if self.lin[i] == -2:
-                    self.place(i, self.findOnLine(i), 'X'); return
-                if self.col[i] == -2:
-                    self.place(self.findOnCol(i), i, 'X'); return
-            elif self.mode == PLAYER_FIRST:
-                if self.lin[i] == 2:
-                    self.place(i, self.findOnLine(i), 'O'); return
-                if self.col[i] == 2:
-                    self.place(self.findOnCol(i), i, 'O'); return
-        # dupa caut daca pot bloca 2 in linie de alea adversarului
-        for i in range(3):
-            if self.mode == AI_FIRST:
-                if self.lin[i] == 2:
-                    self.place(i, self.findOnLine(i), 'X'); return
-                if self.col[i] == 2:
-                    self.place(self.findOnCol(i), i, 'X'); return
-            elif self.mode == PLAYER_FIRST:
-                if self.lin[i] == -2:
-                    self.place(i, self.findOnLine(i), 'O'); return
-                if self.col[i] == -2:
-                    self.place(self.findOnCol(i), i, 'O'); return
-        if self.mode == AI_FIRST and self.diag1 == 2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'X'); return
-        if self.mode == PLAYER_FIRST and self.diag1 == -2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'O'); return
-        if self.mode == AI_FIRST and self.diag2 == 2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'X'); return
-        if self.mode == PLAYER_FIRST and self.diag2 == -2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'O'); return
-        # caut pozitia optima buna si pun pe ea
-        for p in Application.pozitii:
-            threshold = -1 if self.mode == AI_FIRST else 1
-            if self.tabla[p[0]][p[1]] == 0:
-                if self.lin[p[0]] + threshold == 2 * threshold or self.col[p[1]] + threshold == 2 * threshold:
-                    self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
-                    print(p)
+            for i in range(3):
+                if self.lin[i] and self.lin[i] % 3 == 0: 
+                    self.winLabel.text = "A câștigat " + ('O' if self.lin[i] > 0 else 'X'); self.finished = 1
+                    if self.lin[i] > 0 : self.scoreO = self.scoreO + 1
+                    else : self.scoreX = self.scoreX + 1
                     return
-                if ((p[0] == p[1] and self.diag1 + threshold == 2 * threshold) or (p[0] + p[1]==2 and self.diag2 + threshold == 2 * threshold)):
-                    self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
-                    print(p)
+                elif self.col[i] and self.col[i] % 3 == 0: 
+                    self.winLabel.text = "A câștigat " + ('O' if self.col[i] > 0 else 'X'); self.finished = 1
+                    if self.col[i] > 0 : self.scoreO = self.scoreO + 1
+                    else : self.scoreX = self.scoreX + 1
                     return
-        for p in Application.pozitii:
-            if self.tabla[p[0]][p[1]] == 0:
-                self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
-                print(p)
+            if self.diag1 and self.diag1 % 3 == 0: 
+                self.winLabel.text = "A câștigat " + ('O' if self.diag1 > 0 else 'X'); self.finished = 1
+                if self.diag1 > 0 : self.scoreO = self.scoreO + 1
+                else : self.scoreX = self.scoreX + 1
                 return
+            elif self.diag2 and self.diag2 % 3 == 0: 
+                self.winLabel.text = "A câștigat " + ('O' if self.diag2 > 0 else 'X'); self.finished = 1
+                if self.diag2 > 0 : self.scoreO = self.scoreO + 1
+                else : self.scoreX = self.scoreX + 1
+                return
+        # verif remiza
+            if self.finished == 0:
+                if self.freeSpace == 0:
+                        self.finished = 1     
+                        self.winLabel.text = "Remiză."
+    def calcMove(self):
+        if self.dif_turn == 0:
+            index = random.randint(0, len(self.rand_picker) - 1)
+            while len(self.rand_picker)>0 and self.tabla[self.rand_picker[index][0]][self.rand_picker[index][1]] == 1:
+                del self.rand_picker[index]
+                if len(self.rand_picker)>0: index = random.randint(0, len(self.rand_picker) - 1)
+            if len(self.rand_picker)>0:
+                self.place(self.rand_picker[index][0], self.rand_picker[index][1], 'X' if self.mode == AI_FIRST else 'O')
+                del self.rand_picker[index]
+        else:
+            # caut mai intai sa vad daca pot face 3 in linie
+            if self.mode == AI_FIRST and self.diag1 == -2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'X'); return
+            if self.mode == PLAYER_FIRST and self.diag1 == 2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'O'); return
+            if self.mode == AI_FIRST and self.diag2 == -2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'X'); return
+            if self.mode == PLAYER_FIRST and self.diag2 == 2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'O'); return
+            for i in range(3):
+                if self.mode == AI_FIRST:
+                    if self.lin[i] == -2:
+                        self.place(i, self.findOnLine(i), 'X'); return
+                    if self.col[i] == -2:
+                        self.place(self.findOnCol(i), i, 'X'); return
+                elif self.mode == PLAYER_FIRST:
+                    if self.lin[i] == 2:
+                        self.place(i, self.findOnLine(i), 'O'); return
+                    if self.col[i] == 2:
+                        self.place(self.findOnCol(i), i, 'O'); return
+            # dupa caut daca pot bloca 2 in linie de alea adversarului
+            for i in range(3):
+                if self.mode == AI_FIRST:
+                    if self.lin[i] == 2:
+                        self.place(i, self.findOnLine(i), 'X'); return
+                    if self.col[i] == 2:
+                        self.place(self.findOnCol(i), i, 'X'); return
+                elif self.mode == PLAYER_FIRST:
+                    if self.lin[i] == -2:
+                        self.place(i, self.findOnLine(i), 'O'); return
+                    if self.col[i] == -2:
+                        self.place(self.findOnCol(i), i, 'O'); return
+            if self.mode == AI_FIRST and self.diag1 == 2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'X'); return
+            if self.mode == PLAYER_FIRST and self.diag1 == -2: self.place(self.findOnDiag1(), self.findOnDiag1(), 'O'); return
+            if self.mode == AI_FIRST and self.diag2 == 2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'X'); return
+            if self.mode == PLAYER_FIRST and self.diag2 == -2: self.place(self.findOnDiag2(), 2-self.findOnDiag2(), 'O'); return
+            # caut pozitia optima buna si pun pe ea
+            for p in Application.pozitii:
+                threshold = -1 if self.mode == AI_FIRST else 1
+                if self.tabla[p[0]][p[1]] == 0:
+                    if self.lin[p[0]] + threshold == 2 * threshold or self.col[p[1]] + threshold == 2 * threshold:
+                        self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
+                        print(p)
+                        return
+                    if ((p[0] == p[1] and self.diag1 + threshold == 2 * threshold) or (p[0] + p[1]==2 and self.diag2 + threshold == 2 * threshold)):
+                        self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
+                        print(p)
+                        return
+            for p in Application.pozitii:
+                if self.tabla[p[0]][p[1]] == 0:
+                    self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
+                    print(p)
+                    return
+        if self.dif == 2: self.dif_turn = (self.dif_turn + 1) % 2
     def reset(self):
         for i in range(3):
             self.lin[i] = self.col[i] = 0
         self.diag1 = self.diag2 = self.turn = self.finished = 0
+        self.rand_picker = list(Application.pozitii)
+        self.dif_turn = 0 if self.dif < 3 else 1
         self.freeSpace = 9
         self.drawables = self.drawables[0:0]
         self.winLabel.text = ''
-        for i in range(3): 
+        for i in range(3):
             for j in range(3):
                 self.tabla[i][j] = 0
         if self.mode == AI_FIRST:
@@ -220,9 +243,7 @@ class Board(Drawable):
         ('c3B', (self.color * 8))
         )
 
-
-app = Application()
-
+app = Application(DIFICULTATE)
 if app.mode == AI_FIRST:
     app.calcMove()
 
@@ -230,24 +251,28 @@ if app.mode == AI_FIRST:
 def on_draw():
     window.clear()
     global app
-    app.checkWin()
     app.draw(pyglet)
-
 
 @window.event
 def on_mouse_release(x, y, button, modifiers):
         if(button == mouse.LEFT):
             global app
-            if app.finished == 0:
+            if app.finished == 0 and app.isFree(x, y):
                 if app.mode == PLAYER_FIRST:
                     if app.turn == X_TURN:
+                        app.checkWin()
                         app.put(x, y, 'X')
+                        app.checkWin()
                         app.calcMove()
+                        app.checkWin()
                 elif app.mode == AI_FIRST:
                     if app.turn == O_TURN:
+                        app.checkWin()
                         app.put(x, y, 'O')
+                        app.checkWin()
                         app.calcMove()
-            else:
+                        app.checkWin()
+            elif app.finished == 1:
                 app.reset()
 pyglet.app.run()
 
