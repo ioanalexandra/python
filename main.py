@@ -36,6 +36,8 @@ class Application:
          font_size=20, x=450, y=150, color = (156, 78, 86, 255), bold = 1, anchor_x='center', anchor_y='center')
         self.scoreLabel = pyglet.text.Label('', font_name = 'Century Gothic',
          font_size=20, x=390, y=275, color = (156, 78, 86, 255), bold = 1)
+        self.misc = pyglet.text.Label('Dorești să mai joci?(Click)', font_name = 'Century Gothic',
+         font_size=10, x=375, y=105, color = (156, 78, 86, 255), bold = 1)
     def isFree(self, x, y):
         x2, y2 = self.normalize(x, y)
         return self.tabla[x2][y2] == 0
@@ -44,6 +46,7 @@ class Application:
         self.winLabel.draw()
         self.board.draw(p)
         self.scoreLabel.draw()
+        if self.finished == 1: self.misc.draw()
         for e in self.drawables:
             e.draw(p)
     def put(self, x, y, el):
@@ -171,16 +174,13 @@ class Application:
                 if self.tabla[p[0]][p[1]] == 0:
                     if self.lin[p[0]] + threshold == 2 * threshold or self.col[p[1]] + threshold == 2 * threshold:
                         self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
-                        print(p)
                         return
                     if ((p[0] == p[1] and self.diag1 + threshold == 2 * threshold) or (p[0] + p[1]==2 and self.diag2 + threshold == 2 * threshold)):
                         self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
-                        print(p)
                         return
             for p in Application.pozitii:
                 if self.tabla[p[0]][p[1]] == 0:
                     self.place(p[0], p[1], 'X' if self.mode == AI_FIRST else 'O')
-                    print(p)
                     return
         if self.dif == 2: self.dif_turn = (self.dif_turn + 1) % 2
     def reset(self):
@@ -275,6 +275,3 @@ def on_mouse_release(x, y, button, modifiers):
             elif app.finished == 1:
                 app.reset()
 pyglet.app.run()
-
-
-# de rezolvat cand apasa playerul pe o casuta ocupata vine randul ai-ului
